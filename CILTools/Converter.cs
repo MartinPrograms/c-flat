@@ -21,6 +21,7 @@ public class Converter
     private static LLVMValueRef currentInst;
     private static Transpiler transpiler;
     private static string currentMethodName;
+    private static Type returnType;
     public static void ConvertInstructions(List<LLVMValueRef> instructions, LLVMValueRef function, Type returnType, ParameterInfo[] paramsType,
         Transpiler transpiler,ILGenerator il, string currentMethodName)
     {
@@ -37,6 +38,7 @@ public class Converter
 
         il.MarkLabel(currentLabel.Item2); // Start at the first label
     
+        Converter.returnType = returnType;
         Converter.transpiler = transpiler;
         Converter.currentMethodName = currentMethodName;
         
@@ -148,9 +150,11 @@ public class Converter
             try
             {
                 Operation(il, inst);
-            }catch(Exception e)
+            }
+            catch(Exception e)
             {
                 Console.WriteLine(e + "\nat instruction " + inst);
+                throw e;
             }
         }
     }
@@ -952,6 +956,12 @@ var name = GetName(value);
         //var targetType = Helper.GetTypeFromValue(value);
         var targetType = Helper.GetTypeFromValue(value);
         bool isTargetTypePointer = targetType.IsPointer || targetType.IsByRef || targetType == typeof(IntPtr);
+
+        if (structMap.TryGetValue(name, out var structType))
+        {
+            targetType = structType;
+            
+        }
         
         if (allocaMap.TryGetValue(name, out var targetLocal))
         {
@@ -960,17 +970,33 @@ var name = GetName(value);
                 throw new Exception("Store to null alloca!");
             }
 
-            if (isTargetTypePointer)
+            if (allocaMap.TryGetValue(GetName(value), out var sourceLocal))
             {
-                // If the target is a pointer, we need to store the address of the value
-                il.Emit(OpCodes.Ldloc, allocaMap[GetName(value)]);
+                if (isTargetTypePointer)
+                {
+                    // If the target is a pointer, we need to store the address of the value
+                    il.Emit(OpCodes.Ldloc, sourceLocal);
+                    il.Emit(OpCodes.Stloc, targetLocal);
+                }
+                else
+                {
+                    // If the target is not a pointer, we can store the value directly
+                    il.Emit(OpCodes.Ldloc, sourceLocal);
+                    il.Emit(OpCodes.Stloc, targetLocal);
+                }
+                
+                Console.WriteLine($"Stored value in local {targetLocal.LocalIndex}");
+            }
+            else if (Helper.IsConstant(value))
+            {
+                var constValue = Helper.GetValue(value, targetType);
+                Helper.EmitConstant(il, constValue);
                 il.Emit(OpCodes.Stloc, targetLocal);
+                Console.WriteLine($"Stored constant value in local {targetLocal.LocalIndex}");
             }
             else
             {
-                // If the target is not a pointer, we can store the value directly
-                il.Emit(OpCodes.Ldloc, allocaMap[GetName(value)]);
-                il.Emit(OpCodes.Stloc, targetLocal);
+                throw new Exception("Store from unmapped alloca!");
             }
             
             Console.WriteLine($"Stored value in local {targetLocal.LocalIndex}");
@@ -1011,8 +1037,16 @@ var name = GetName(value);
     private static void OpRet(ILGenerator il, LLVMValueRef inst)
     {
         var value = inst.GetOperand(0); // The value to return
+        
+        // LLVMSharp is a slight bit unstable, so i check the return type of the function declared elsewhere
+        if (returnType == typeof(void))
+        {
+            il.Emit(OpCodes.Ret);
+            return;
+        }
+        
         var type = Helper.GetTypeFromValue(value); // The type of the value
-
+        
         if (Helper.IsConstant(value))
         {
             var constValue = Helper.GetValue(value, type); // Get the constant value

@@ -700,6 +700,7 @@ public static class Helper
     public static unsafe Type GetTypeFromValue(LLVMValueRef inst)
     {
         
+        
         var type = inst.TypeOf;
         var kind = type.Kind;
         return kind.FromLLVM();

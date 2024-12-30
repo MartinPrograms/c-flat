@@ -128,6 +128,7 @@ public class Transpiler
         // First pass for struct names, and standard fields
         List<Tuple<string, Type, TypeBuilder, string, ILGenerator>> tracker = new();
         List<Tuple<TypeBuilder, ILGenerator>> structBuilders = new();
+        int j = 0;
         for (int i = 0; i < structNames.Count; i++)
         {
             var fields = structFields[i].Select(Helper.TypeFromString).ToList();
@@ -139,7 +140,8 @@ public class Transpiler
             
             foreach (var field in fields)
             {
-                tracker.Add(new Tuple<string, Type, TypeBuilder, string,  ILGenerator>("_" + fields.IndexOf(field),field, structType, structFields[i][fields.IndexOf(field)], il));
+                tracker.Add(new Tuple<string, Type, TypeBuilder, string,  ILGenerator>("_" + j.ToString(),field, structType, structFields[i][fields.IndexOf(field)], il));
+                j++;
             }
             
             structBuilders.Add(new Tuple<TypeBuilder, ILGenerator>(structType, il));
@@ -160,10 +162,10 @@ public class Transpiler
             }
             else
             {
-                // This is a standard field
                 structType.DefineField(name, field, FieldAttributes.Public);
-                // Set the default value
             }
+            
+            Console.WriteLine($"Added field {name} to struct {structType.Name}");
         }
 
 
@@ -220,6 +222,7 @@ public class Transpiler
             {
                 // Here we need to convert the LLVM instructions to CIL
                 // This is the hard part, there is a new class called Converter that will do this
+                Console.WriteLine("Transpiling function: " + name);
                 Converter.ConvertInstructions(instructions, function, returnType, paramTypes, this, il, name);
             }
             il.Emit(OpCodes.Ret);
