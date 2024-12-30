@@ -8,10 +8,12 @@ class Program
 {
     public static void Main(string[] args)
     {
+        
 #if DEBUG
         if (args.Length == 0) // most likely running from the IDE
             args = new string[] { "compilec", "C:\\Users\\marti\\CLionProjects\\CIR\\main.c","test","ClassName", "-exe", };
 #endif
+        
         try
         {
             Console.WriteLine("CILTools v1.0 by Martin.");
@@ -19,7 +21,6 @@ class Program
             if (args.Length == 0)
             {
                 Console.WriteLine("Usage: CILTools <operation> <args>");
-                Console.WriteLine("Operations: compile, analyze, transpile");
                 Console.WriteLine("Example: CILTools compile main.il main.exe -exe, compiles CIL to an executable");
                 Console.WriteLine("Example: CILTools analyze main.ll, analyzes LLVM IR");
                 Console.WriteLine("Example: CILTools transpile main.ll main, transpiles LLVM IR to CIL (the big one)");
