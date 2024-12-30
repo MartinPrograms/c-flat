@@ -34,4 +34,4 @@ Rest is outdated.
 
 This program expects LLVM, Clang, dotnet and ilasm to be in your path. https://releases.llvm.org/download.html  
 
-It uses a C# made standard library, with declarations in a header file, which can be included by your source file.
+It uses a C# made standard library, with declarations in a header file, which can be included by your source file.  You can find it in /CILTools/std/std.h
